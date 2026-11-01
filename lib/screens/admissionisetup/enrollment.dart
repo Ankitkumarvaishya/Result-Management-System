@@ -1651,7 +1651,7 @@ class _EnrollmentState extends State<Enrollment> {
                                                             );
                                                           },
                                                           child: const Text(
-                                                            "Delete!",
+                                                            "Delete",
                                                           ),
                                                         ),
                                                       ],
