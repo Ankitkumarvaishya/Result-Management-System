@@ -205,6 +205,106 @@ class _SubjectssetupState extends State<Subjectssetup> {
     }
   }
 
+  //update subjects
+  Future<void> updateSubjects(
+    String id,
+    String classId,
+    String subjectName,
+    String subjectCode,
+    String creditHours,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    String? host = prefs.getString('saved_host');
+    var url = Uri.parse(
+      "http://$host/resultsetupapi.php?action=updatesubjects",
+    );
+
+    var response = await http.post(
+      url,
+      body: {
+        "subject_id": id,
+        "class_id": classId,
+        "subject_name": subjectName,
+        "subject_code": subjectCode,
+        "credit_hours": creditHours,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      fetchSubjects(); // Refresh the table
+    } else {
+      print("Update failed");
+    }
+  }
+
+  //dialog box to update
+  void showEditDialog(Map<String, dynamic> item) {
+    // Initialize controllers with current values from the selected row
+    TextEditingController nameController = TextEditingController(
+      text: item['subject_name']?.toString() ?? '',
+    );
+    TextEditingController codeController = TextEditingController(
+      text: item['subject_code']?.toString() ?? '',
+    );
+    TextEditingController creditController = TextEditingController(
+      text: item['credit_hours']?.toString() ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit Subject"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: "Subject Name"),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: codeController,
+                  decoration: const InputDecoration(labelText: "Subject Code"),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: creditController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: "Credit Hours"),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              onPressed: () {
+                updateSubjects(
+                  item['subject_id'].toString(),
+                  item['class_id'].toString(),
+                  nameController.text,
+                  codeController.text,
+                  creditController.text,
+                );
+                Navigator.pop(context);
+              },
+              child: const Text(
+                "Save Changes",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // --- NEW SORTING METHOD ROUTINE ---
   void _sortData(
     int columnIndex,
@@ -260,9 +360,8 @@ class _SubjectssetupState extends State<Subjectssetup> {
     }
   }
 
-  // ---------------------------------------------------------------------
   // SHARED SCHOOL HEADER HELPERS (same pattern as Enrollment page)
-  // ---------------------------------------------------------------------
+
   Future<Uint8List> _loadLogoBytes() async {
     final path = SchoolConfig.logoPath;
     if (path == null || path.isEmpty) {
@@ -696,7 +795,7 @@ class _SubjectssetupState extends State<Subjectssetup> {
                     controller: _creditHourController,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
-                      hintText: 'Enter subject Credit Hour (e.g. 2 , 3)',
+                      hintText: 'Enter subject Credit Hour',
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -828,6 +927,11 @@ class _SubjectssetupState extends State<Subjectssetup> {
                     ),
                   ),
                   const SizedBox(height: 10),
+                  Text(
+                    "List of Subjects For Every Classes",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 10),
                   Expanded(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.vertical,
@@ -904,44 +1008,62 @@ class _SubjectssetupState extends State<Subjectssetup> {
                                   ),
                                 ),
                                 DataCell(
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) {
-                                          return AlertDialog(
-                                            title: const Text("Confirm Delete"),
-                                            content: const Text(
-                                              "Are you sure you want to delete this examination?",
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(context),
-                                                child: const Text("Cancel"),
-                                              ),
-                                              ElevatedButton(
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.red,
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        onPressed: () {
+                                          showEditDialog(item);
+                                        },
+                                        icon: Icon(
+                                          Icons.edit,
+                                          color: Colors.green,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                        ),
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) {
+                                              return AlertDialog(
+                                                title: const Text(
+                                                  "Confirm Delete",
                                                 ),
-                                                onPressed: () {
-                                                  deleteSubjects(
-                                                    item['subject_id']
-                                                        .toString(),
-                                                  );
-                                                  Navigator.pop(context);
-                                                },
-                                                child: const Text("Delete"),
-                                              ),
-                                            ],
+                                                content: const Text(
+                                                  "Are you sure you want to delete this examination?",
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.pop(context),
+                                                    child: const Text("Cancel"),
+                                                  ),
+                                                  ElevatedButton(
+                                                    style:
+                                                        ElevatedButton.styleFrom(
+                                                          backgroundColor:
+                                                              Colors.red,
+                                                        ),
+                                                    onPressed: () {
+                                                      deleteSubjects(
+                                                        item['subject_id']
+                                                            .toString(),
+                                                      );
+                                                      Navigator.pop(context);
+                                                    },
+                                                    child: const Text("Delete"),
+                                                  ),
+                                                ],
+                                              );
+                                            },
                                           );
                                         },
-                                      );
-                                    },
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
